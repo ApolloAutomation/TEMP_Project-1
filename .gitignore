@@ -33,3 +33,5 @@
 Integrations/ESPHome/.DS_Store
 Integrations/.DS_Store
 .DS_Store
+Integrations/ESPHome/.esphome/build/apollo-temp-pro-1/.pioenvs
+Integrations/ESPHome/.esphome
