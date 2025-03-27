@@ -28,7 +28,7 @@ globals:
 
 i2c:
   sda: GPIO16
-  scl: GPIO17
+  scl: GPIO17d
   id: bus_a
 
 web_server:  
