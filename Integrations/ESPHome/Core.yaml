@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.3.26.1"
+  version: "25.3.28.1"
   device_description: ${name} made by Apollo Automation - version ${version}.
 
 esp32:
@@ -33,15 +33,6 @@ i2c:
 
 web_server:  
   port: 80
-  
-ethernet:  
-  type: W5500  
-  clk_pin: GPIO10  
-  mosi_pin: GPIO12 
-  miso_pin: GPIO11
-  cs_pin: GPIO9
-  interrupt_pin: GPIO13
-  reset_pin: GPIO14
 
 one_wire:
   - platform: gpio
@@ -63,22 +54,37 @@ binary_sensor:
     id: ink_ha_connected
   - platform: gpio
     pin: 
-      number: GPIO0
+      number: GPIO9
       inverted: true
       mode:
         input: true
         pullup: true
     id: reset_button
+    on_press:
+      then:
+        - lambda: |-
+            id(button_press_timestamp) = millis();    
+    on_release:
+      then:
+        - lambda: |-
+            if (millis() - id(button_press_timestamp) >= 10000) {
+              // Remove Wifi
+              id(factory_reset_switch).turn_on();
+            }
+            else {
+              // StatusCheck
+              id(statusCheck).execute();
+            }
 
   - platform: template
     name: Temperature Within Range
     id: temp_within_range
-    lambda: 'return (id(sht_temperature).state < id(max_temp).state) && (id(sht_temperature).state > id(min_temp).state);'
+    lambda: 'return (id(sht_temperature).state <= id(max_temp).state) && (id(sht_temperature).state >= id(min_temp).state) ? "true" : "false";'
 
   - platform: template
     name: Humidity Within Range
     id: humidity_within_range
-    lambda: 'return (id(sht_humidity).state < id(max_humidity).state) && (id(sht_humidity).state > id(min_humidity).state);'
+    lambda: 'return (id(sht_humidity).state <= id(max_humidity).state) && (id(sht_humidity).state >= id(min_humidity).state) ? "true" : "false";'
 
 sensor:
   - platform: internal_temperature
@@ -223,6 +229,43 @@ interval:
                   return (id(temp_within_range).state && id(humidity_within_range).state);
               then:
                 - light.turn_off: rgb_light
+
+script:
+  - id: statusCheck
+    then:
+      - if:
+          condition:
+            - lambda: 'return id(ink_ha_connected).state;'
+          then:
+            - logger.log: "Apollo Automation: Connected To HA"
+            - light.turn_on: 
+                id: rgb_light
+                brightness: 100%
+                red: 0%
+                green: 0%
+                blue: 100%
+          else:
+            - if:
+                condition:
+                  - wifi.connected
+                then:
+                  - logger.log: "Apollo Automation: Connected To Wifi"
+                  - light.turn_on: 
+                      id: rgb_light
+                      brightness: 100%
+                      red: 0%
+                      green: 100%
+                      blue: 0%
+                else:
+                  - logger.log: "Apollo Automation: Not Connected To Wifi"
+                  - light.turn_on: 
+                      id: rgb_light
+                      brightness: 100%
+                      red: 100%
+                      green: 100%
+                      blue: 0%
+      - delay: 5s
+      - light.turn_off: rgb_light
 
 
 ## TODO: Add Update Frequency Control

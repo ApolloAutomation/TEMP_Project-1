@@ -35,5 +35,11 @@ update:
 
 logger:
 
+wifi:
+  ap:
+    ssid: "Apollo TEMP_PRO-1 Hotspot"
+    
+captive_portal:
+
 packages:
   core: !include Core.yaml
