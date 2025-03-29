@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.3.29.5"
+  version: "25.3.29.6"
   device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
