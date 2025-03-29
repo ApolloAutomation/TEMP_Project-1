@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.3.28.2"
+  version: "25.3.29.1"
   device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
@@ -229,10 +229,3 @@ interval:
                   return (id(temp_within_range).state && id(humidity_within_range).state);
               then:
                 - light.turn_off: rgb_light
-
-
-
-
-## TODO: Add Update Frequency Control
-
-## TODO: Specific Repo For Lot
