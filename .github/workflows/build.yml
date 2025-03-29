@@ -40,7 +40,7 @@ jobs:
       version: ${{ steps.read_version.outputs.version }}
       upload_url: ${{ steps.run-release-drafter.outputs.upload_url }}
       html_url: ${{ steps.run-release-drafter.outputs.html_url }}
-      # Removed 'body' output to avoid truncation
+      # (Removed 'body' to avoid large env usage)
 
     permissions:
       contents: write
@@ -59,16 +59,6 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "Detected version: $version"
 
-      - name: Fetch Last Merged PR Body
-        id: last_pr
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&sort=updated&direction=desc&per_page=1")
-          PR_BODY=$(echo "$PR_INFO" | jq -r '.[0].body')
-          echo "$PR_BODY" > pr_body.txt
-
       - name: 🚀 Run Release Drafter
         id: run-release-drafter
         uses: release-drafter/release-drafter@v6
@@ -80,14 +70,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 1) Fetch the final, merged Release Drafter body from the GitHub release
+      - name: Fetch Final Release Drafter Body
+        id: fetch_final_body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.read_version.outputs.version }}"
+          # Retrieve the newly published release
+          release_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag")
+          final_body=$(echo "$release_json" | jq -r '.body')
+          echo "$final_body" > final_release_body.txt
+
+      # 2) Upload that final release body as an artifact
       - name: Upload Release Body Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-body
-          path: pr_body.txt
+          path: final_release_body.txt
 
-  # This job downloads the artifact and stores the body as a short environment variable
-  # that can be used by build-firmware-e as 'release-summary'.
   prepare-firmware-e:
     name: Prepare Firmware-E Summary
     runs-on: ubuntu-latest
@@ -108,15 +110,11 @@ jobs:
       - name: Make Summary Output
         id: make_summary
         run: |
-          # Read entire text from pr_body.txt
-          release_body="$(cat pr_body.txt)"
-
-          # Convert newlines, etc., so it can safely be stored in step outputs
-          # (Note: If it still exceeds ~64KB, GitHub might truncate it again.)
+          release_body="$(cat final_release_body.txt)"
+          # Escape for GH step output
           release_body_escaped="${release_body//'%'/'%25'}"
           release_body_escaped="${release_body_escaped//$'\n'/'%0A'}"
           release_body_escaped="${release_body_escaped//$'\r'/'%0D'}"
-
           echo "release_summary=$release_body_escaped" >> $GITHUB_OUTPUT
 
   build-firmware-e:
@@ -132,11 +130,9 @@ jobs:
         Integrations/ESPHome/TEMP_PRO-1_ETH.yaml
       esphome-version: stable
       combined-name: firmware-e
-      # Use the artifact-based text from prepare-firmware-e
       release-summary: ${{ needs.prepare-firmware-e.outputs.release_summary }}
       release-version: ${{ needs.set-version.outputs.version }}
 
-  # Similarly for firmware-w
   prepare-firmware-w:
     name: Prepare Firmware-W Summary
     runs-on: ubuntu-latest
@@ -157,11 +153,10 @@ jobs:
       - name: Make Summary Output
         id: make_summary
         run: |
-          release_body="$(cat pr_body.txt)"
+          release_body="$(cat final_release_body.txt)"
           release_body_escaped="${release_body//'%'/'%25'}"
           release_body_escaped="${release_body_escaped//$'\n'/'%0A'}"
           release_body_escaped="${release_body_escaped//$'\r'/'%0D'}"
-
           echo "release_summary=$release_body_escaped" >> $GITHUB_OUTPUT
 
   build-firmware-w:
@@ -190,7 +185,7 @@ jobs:
       - set-version
     if: needs.check-for-yaml.outputs.yaml_changed == 'true'
     steps:
-      - name: Checkout source code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Build
