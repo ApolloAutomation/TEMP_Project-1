@@ -36,25 +36,24 @@ jobs:
         id: determine_label
         run: |
           label=""
-      
-          # Check PR title for "chore" first (case-insensitive)
-          if echo "${{ github.event.pull_request.title }}" | grep -qi 'chore'; then
-            label="dependency-update"
-      
-          # Else check the body lines
-          elif grep -qE '^- \\[x\\] Bugfix' pr_body.txt; then
+
+          # 1) Bugfix
+          if grep -qE '^- \[x\] Bugfix' pr_body.txt; then
             label="bugfix"
-      
-          elif grep -qE '^- \\[x\\] New feature' pr_body.txt; then
+
+          # 2) New feature
+          elif grep -qE '^- \[x\] New feature' pr_body.txt; then
             label="new-feature"
-      
-          elif grep -qE '^- \\[x\\] Breaking change' pr_body.txt; then
+
+          # 3) Breaking change
+          elif grep -qE '^- \[x\] Breaking change' pr_body.txt; then
             label="breaking-change"
-      
-          elif grep -qE '^- \\[x\\] Dependency Update - Does not publish' pr_body.txt; then
+
+          # 4) Dependency update
+          elif grep -qE '^- \[x\] Dependency Update - Does not publish' pr_body.txt; then
             label="dependency-update"
           fi
-      
+
           echo "Chosen label: $label"
           echo "chosen_label=$label" >> $GITHUB_OUTPUT
 
