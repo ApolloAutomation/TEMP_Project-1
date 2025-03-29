@@ -46,11 +46,12 @@ template: |
 
   $CHANGES
 
-  **[Releases](https://github.com/ApolloAutomation/TEMP_PROJECT-1/releases)  
-  **[Full Changelog](https://github.com/ApolloAutomation/TEMP_PROJECT-1/compare/$PREVIOUS_TAG...$RESOLVED_VERSION.1)
+  [Releases](https://github.com/ApolloAutomation/TEMP_PROJECT-1/releases)  
+  [Full Changelog](https://github.com/ApolloAutomation/TEMP_PROJECT-1/compare/$PREVIOUS_TAG...$RESOLVED_VERSION.1)
 
   For help or support, you can:
   - Email us at [support@apolloautomation.com](mailto:support@apolloautomation.com)
   - Join our Discord: [dsc.gg/ApolloAutomation](http://dsc.gg/ApolloAutomation)
+  - Wiki: [wiki.apolloautomation.com](https://wiki.apolloautomation.com)
 
   Be sure to 🌟 this repository for updates!
