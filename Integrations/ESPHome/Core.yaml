@@ -1,6 +1,6 @@
 substitutions:
-  version: "25.3.28.1"
-  device_description: ${name} made by Apollo Automation - version ${version}.
+  version: "25.3.28.2"
+  device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -54,7 +54,7 @@ binary_sensor:
     id: ink_ha_connected
   - platform: gpio
     pin: 
-      number: GPIO9
+      number: GPIO0
       inverted: true
       mode:
         input: true
@@ -230,42 +230,7 @@ interval:
               then:
                 - light.turn_off: rgb_light
 
-script:
-  - id: statusCheck
-    then:
-      - if:
-          condition:
-            - lambda: 'return id(ink_ha_connected).state;'
-          then:
-            - logger.log: "Apollo Automation: Connected To HA"
-            - light.turn_on: 
-                id: rgb_light
-                brightness: 100%
-                red: 0%
-                green: 0%
-                blue: 100%
-          else:
-            - if:
-                condition:
-                  - wifi.connected
-                then:
-                  - logger.log: "Apollo Automation: Connected To Wifi"
-                  - light.turn_on: 
-                      id: rgb_light
-                      brightness: 100%
-                      red: 0%
-                      green: 100%
-                      blue: 0%
-                else:
-                  - logger.log: "Apollo Automation: Not Connected To Wifi"
-                  - light.turn_on: 
-                      id: rgb_light
-                      brightness: 100%
-                      red: 100%
-                      green: 100%
-                      blue: 0%
-      - delay: 5s
-      - light.turn_off: rgb_light
+
 
 
 ## TODO: Add Update Frequency Control
