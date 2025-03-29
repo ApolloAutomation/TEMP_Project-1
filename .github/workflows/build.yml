@@ -29,6 +29,7 @@ jobs:
             echo "yaml_changed=true" >> $GITHUB_OUTPUT
           else
             echo "yaml_changed=false" >> $GITHUB_OUTPUT
+          fi
 
   set-version:
     name: Set Version
