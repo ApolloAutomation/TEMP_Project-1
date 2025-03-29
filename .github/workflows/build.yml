@@ -41,7 +41,6 @@ jobs:
       version: ${{ steps.read_version.outputs.version }}
       upload_url: ${{ steps.run-release-drafter.outputs.upload_url }}
       html_url: ${{ steps.run-release-drafter.outputs.html_url }}
-      # We no longer try to pass the entire body as a job output (which can truncate)
 
     permissions:
       contents: write
@@ -81,10 +80,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Save the final release body from run-release-drafter (if needed)
-      # Or we can just keep PR_BODY from above. If you need the fully compiled release notes,
-      # fetch them from the newly published release. For simplicity, let's assume pr_body.txt is enough.
-      # We'll store pr_body.txt or the full release body as an artifact.
       - name: Upload Release Body Artifact
         if: ${{ steps.run-release-drafter.conclusion == 'success' }}
         uses: actions/upload-artifact@v4
@@ -98,24 +93,21 @@ jobs:
       - check-for-yaml
       - set-version
     if: needs.check-for-yaml.outputs.yaml_changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Body Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release-body
-          path: .
+    uses: esphome/workflows/.github/workflows/build.yml@main  # <--- Reusable workflow at top-level
+    with:
+      files: Integrations/ESPHome/TEMP_PRO-1_ETH.yaml
+      esphome-version: stable
+      combined-name: firmware-e
+      # We'll rely on summary-file approach
+      summary-file: pr_body.txt
+      release-version: ${{ needs.set-version.outputs.version }}
 
-      - name: Build firmware
-        uses: esphome/workflows/.github/workflows/build.yml@main
-        with:
-          files: |
-            Integrations/ESPHome/TEMP_PRO-1_ETH.yaml
-          esphome-version: stable
-          combined-name: firmware-e
-          # Instead of 'release-summary:', pass 'summary-file: pr_body.txt'
-          summary-file: pr_body.txt
-          release-version: ${{ needs.set-version.outputs.version }}
+    permissions:
+      # If the reusable workflow needs certain permissions, set them here or in the reusable workflow
+      contents: write
+
+    # We'll add a step to download the artifact before the reusable workflow runs
+    # so it has pr_body.txt available.
 
   build-firmware-w:
     name: Build And Release (Firmware W)
@@ -123,24 +115,17 @@ jobs:
       - check-for-yaml
       - set-version
     if: needs.check-for-yaml.outputs.yaml_changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Body Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release-body
-          path: .
+    uses: esphome/workflows/.github/workflows/build.yml@main
+    with:
+      files: Integrations/ESPHome/TEMP_PRO-1_W.yaml
+      esphome-version: stable
+      combined-name: firmware-w
+      summary-file: pr_body.txt
+      release-url: ${{ needs.set-version.outputs.html_url }}
+      release-version: ${{ needs.set-version.outputs.version }}
 
-      - name: Build firmware
-        uses: esphome/workflows/.github/workflows/build.yml@main
-        with:
-          files: |
-            Integrations/ESPHome/TEMP_PRO-1_W.yaml
-          esphome-version: stable
-          combined-name: firmware-w
-          summary-file: pr_body.txt
-          release-url: ${{ needs.set-version.outputs.html_url }}
-          release-version: ${{ needs.set-version.outputs.version }}
+    permissions:
+      contents: write
 
   build-site:
     name: Build Site
@@ -184,25 +169,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1) Download Firmware
+      # 1) Download firmware artifacts
       - uses: actions/download-artifact@v4
         with:
           name: firmware-e
           path: firmware-e
 
-      # 2) Download Firmware-W
       - uses: actions/download-artifact@v4
         with:
           name: firmware-w
           path: firmware-w
 
-      # 3) Zip them up
+      # 2) Zip them
       - name: Zip firmware
         run: |
           zip -r firmware-e.zip firmware-e
           zip -r firmware-w.zip firmware-w
 
-      # 4) Upload firmware-e.zip as an asset
+      # 3) Upload them to the release
       - name: Upload firmware-e.zip
         id: upload-firmware
         uses: actions/upload-release-asset@v1
@@ -214,7 +198,6 @@ jobs:
           asset_name: firmware-e.zip
           asset_content_type: application/zip
 
-      # 5) Upload firmware-w.zip
       - name: Upload firmware-w.zip
         id: upload-firmware-w
         uses: actions/upload-release-asset@v1
