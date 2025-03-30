@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.3.30.1"
+  version: "25.3.30.2"
   device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
@@ -202,12 +202,37 @@ switch:
     id: alarm_outside_temp_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
-
   - platform: template
     name: "Alarm Outside Humidity Range"
     id: alarm_outside_humidity_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
+
+select:
+  - platform: template
+    id: firmware_selector
+    name: Firmware Type
+    icon: "mdi:test-tube"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options:
+      - "WiFi"
+      - "Ethernet"
+    initial_option: "WiFi"
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(firmware_selector).state == "Ethernet";'
+            then:
+              - logger.log: "OTA updates set to use ethernet firmware"
+              - lambda: id(update_http_request).set_source_url("https://apolloautomation.github.io/TEMP_PROJECT-1/firmware-e/manifest.json");
+              - component.update: update_http_request
+            else:
+              - logger.log: "OTA updates set to use wifi firmware"
+              - lambda: id(update_http_request).set_source_url("https://apolloautomation.github.io/TEMP_PROJECT-1/firmware-w/manifest.json");
+              - component.update: update_http_request
 
 interval:  
   - interval: 10s
