@@ -29,7 +29,7 @@ safe_mode:
 
 update:
   - platform: http_request
-    id: firmware_update
+    id: update_http_request
     name: Firmware Update
     source: https://apolloautomation.github.io/TEMP_PROJECT-1/firmware-e/manifest.json
 
