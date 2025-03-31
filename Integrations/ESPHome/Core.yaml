@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.3.30.2"
+  version: "25.3.31.1"
   device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
@@ -128,6 +128,14 @@ light:
           max_brightness: 100%
 
 button:
+  - platform: template
+    name: "Update Firmware"
+    id: update_firmware
+    on_press:
+      then:
+        - lambda: |-
+            id(update_http_request).perform(true);
+            
   - platform: restart
     icon: mdi:power-cycle
     name: "ESP Reboot"
@@ -136,6 +144,8 @@ button:
     disabled_by_default: True
     name: "Factory Reset ESP"
     id: factory_reset_all
+
+
 
 number:
   - platform: template
@@ -254,3 +264,10 @@ interval:
                   return (id(temp_within_range).state && id(humidity_within_range).state);
               then:
                 - light.turn_off: rgb_light
+
+text_sensor:
+  - platform: template
+    name: "OTA URL"
+    id: ota_url
+    entity_category: "diagnostic"
+    internal: true
