@@ -131,10 +131,12 @@ button:
   - platform: template
     name: "Update Firmware"
     id: update_firmware
+    entity_category: config
     on_press:
       then:
         - lambda: |-
             id(update_http_request).perform(true);
+    
             
   - platform: restart
     icon: mdi:power-cycle
