@@ -250,8 +250,6 @@ interval:
   - interval: 10s
     startup_delay: 10s
     then:
-      - component.update: humidity_within_range
-      - component.update: temp_within_range
       - if:
           condition:
             lambda: !lambda |-
