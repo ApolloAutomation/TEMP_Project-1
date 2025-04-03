@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.3.31.1"
+  version: "25.4.3.1"
   device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
@@ -79,12 +79,12 @@ binary_sensor:
   - platform: template
     name: Temperature Within Range
     id: temp_within_range
-    lambda: 'return (id(sht_temperature).state <= id(max_temp).state) && (id(sht_temperature).state >= id(min_temp).state) ? "true" : "false";'
+    lambda: 'return (id(sht_temperature).state <= id(max_temp).state) && (id(sht_temperature).state >= id(min_temp).state);'
 
   - platform: template
     name: Humidity Within Range
     id: humidity_within_range
-    lambda: 'return (id(sht_humidity).state <= id(max_humidity).state) && (id(sht_humidity).state >= id(min_humidity).state) ? "true" : "false";'
+    lambda: 'return (id(sht_humidity).state <= id(max_humidity).state) && (id(sht_humidity).state >= id(min_humidity).state);'
 
 sensor:
   - platform: internal_temperature
