@@ -1,5 +1,5 @@
 substitutions:
-  version: "25.4.3.1"
+  version: "25.5.14.1"
   device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
@@ -86,10 +86,19 @@ binary_sensor:
     id: humidity_within_range
     lambda: 'return (id(sht_humidity).state <= id(max_humidity).state) && (id(sht_humidity).state >= id(min_humidity).state);'
 
+  - platform: template
+    name: Alarm Active
+    id: alarm_active
+    lambda: 'return (id(alarm_outside_temp_range).state && !id(temp_within_range).state) || (id(alarm_outside_humidity_range).state && !id(humidity_within_range).state);'
+    on_release:
+      then:
+        - light.turn_off: rgb_light
+
 sensor:
   - platform: internal_temperature
     name: "ESP Temperature"
     id: sys_esp_temperature
+    disabled_by_default: true
 
   - platform: uptime
     name: Uptime
@@ -161,6 +170,7 @@ number:
     optimistic: true
     update_interval: never
     mode: box
+    entity_category: config
 
   - platform: template
     id: max_temp
@@ -173,6 +183,7 @@ number:
     optimistic: true
     update_interval: never
     mode: box
+    entity_category: config
 
   - platform: template
     id: min_humidity
@@ -185,6 +196,7 @@ number:
     optimistic: true
     update_interval: never
     mode: box
+    entity_category: config
 
   - platform: template
     id: max_humidity
@@ -197,75 +209,48 @@ number:
     optimistic: true
     update_interval: never
     mode: box
+    entity_category: config
 
 switch:
   - platform: factory_reset
     id: factory_reset_switch
     internal: true
+
   - platform: gpio
-    pin: GPIO5
+    pin: GPIO7
     name: "Accessory Power"
     id: accessory_power
     restore_mode: ALWAYS_ON
     setup_priority: 1100
     internal: true
+
   - platform: template
     name: "Alarm Outside Temp Range"
     id: alarm_outside_temp_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
+
+    
   - platform: template
     name: "Alarm Outside Humidity Range"
     id: alarm_outside_humidity_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
 
-select:
-  - platform: template
-    id: firmware_selector
-    name: Firmware Type
-    icon: "mdi:test-tube"
-    entity_category: config
-    optimistic: true
-    restore_value: true
-    options:
-      - "WiFi"
-      - "Ethernet"
-    initial_option: "WiFi"
-    on_value:
-      then:
-        - if:
-            condition:
-              lambda: 'return id(firmware_selector).state == "Ethernet";'
-            then:
-              - logger.log: "OTA updates set to use ethernet firmware"
-              - lambda: id(update_http_request).set_source_url("https://apolloautomation.github.io/TEMP_PROJECT-1/firmware-e/manifest.json");
-              - component.update: update_http_request
-            else:
-              - logger.log: "OTA updates set to use wifi firmware"
-              - lambda: id(update_http_request).set_source_url("https://apolloautomation.github.io/TEMP_PROJECT-1/firmware-w/manifest.json");
-              - component.update: update_http_request
 
-interval:  
+interval:
   - interval: 10s
     startup_delay: 10s
     then:
       - if:
           condition:
             lambda: !lambda |-
-              return (id(alarm_outside_temp_range).state && !id(temp_within_range).state) || (id(alarm_outside_humidity_range).state && !id(humidity_within_range).state);
+              return id(alarm_active).state;
           then:
             - lambda: !lambda |-
                 id(rgb_light).turn_on().set_effect("Fast Pulse").perform();
                 id(rgb_light).turn_on().set_rgb(1, 0, 0).set_transition_length(0).perform();
                 id(rtttl_buzzer).play("siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e;");
-          else:
-            if:
-              condition:
-                lambda: !lambda |-
-                  return (id(temp_within_range).state && id(humidity_within_range).state);
-              then:
-                - light.turn_off: rgb_light
 
 text_sensor:
   - platform: template
