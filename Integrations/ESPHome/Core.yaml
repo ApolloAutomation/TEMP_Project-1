@@ -1,10 +1,11 @@
 substitutions:
-  version: "25.5.15.1"
-  device_description: $TEMP_PRO-1 made by Apollo Automation - version ${version}.
+  version: "25.6.10.1"
+  device_description: TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
 esp32:
   board: esp32-s3-devkitc-1
   variant: esp32s3
+  flash_size: 8MB
   framework:
     type: esp-idf
 
@@ -112,6 +113,101 @@ sensor:
     humidity:
       name: "Relative Humidity"
       id: sht_humidity
+  - platform: sen5x
+    id: sen54
+    pm_1_0:
+      name: "PM <1µm Weight concentration"
+      id: pm_1_0
+      disabled_by_default: true
+      accuracy_decimals: 1
+      filters:
+        - sliding_window_moving_average:
+            window_size: 9
+            send_every: 1
+    pm_2_5:
+      name: "PM <2.5µm Weight concentration"
+      id: pm_2_5
+      disabled_by_default: true
+      accuracy_decimals: 1
+      filters:
+        - sliding_window_moving_average:
+            window_size: 9
+            send_every: 1
+    pm_4_0:
+      name: "PM <4µm Weight concentration"
+      id: pm_4_0
+      disabled_by_default: true
+      accuracy_decimals: 1
+    pm_10_0:
+      name: "PM <10µm Weight concentration"
+      id: pm_10_0
+      disabled_by_default: true
+      accuracy_decimals: 1
+    nox:
+      name: "NOX Index"
+      id: sen_nox
+      disabled_by_default: true
+      accuracy_decimals: 1
+    voc:
+      name: "VOC Index"
+      id: sen_voc
+      disabled_by_default: true
+      algorithm_tuning:
+        index_offset: 100
+        learning_time_offset_hours: 12
+        learning_time_gain_hours: 12
+        gating_max_duration_minutes: 180
+        std_initial: 50
+        gain_factor: 230
+      filters:
+        - sliding_window_moving_average:
+            window_size: 9
+            send_every: 1
+    temperature_compensation:
+      offset: 0
+      normalized_offset_slope: 0
+      time_constant: 0
+    store_baseline: true
+    update_interval: 10s
+
+  - platform: template
+    name: "PM 0.3 To 1 µm"
+    id: pm0_3_to_1
+    disabled_by_default: true
+    lambda: return id(pm_1_0).state;
+    unit_of_measurement: "µg/m³"
+    state_class: measurement
+    icon: mdi:air-filter
+    update_interval: 10s
+  
+  - platform: template
+    name: "PM 1 To 2.5 µm"
+    id: pm1_to_2_5
+    disabled_by_default: true
+    lambda: return id(pm_2_5).state - id(pm_1_0).state;
+    unit_of_measurement: "µg/m³"
+    state_class: measurement
+    icon: mdi:air-filter
+    update_interval: 10s
+  
+  - platform: template
+    name: "PM 2.5 To 4 µm"
+    id: pm2_5_to_4
+    disabled_by_default: true
+    lambda: return id(pm_4_0).state - id(pm_2_5).state;
+    unit_of_measurement: "µg/m³"
+    state_class: measurement
+    icon: mdi:air-filter
+    update_interval: 10s
+
+  - platform: template
+    name: "PM 4 To 10 µm"
+    id: pm4_to_10
+    disabled_by_default: true
+    lambda: return id(pm_10_0).state - id(pm_4_0).state;
+    unit_of_measurement: "µg/m³"
+    icon: mdi:air-filter
+    update_interval: 10s
 
 light:
   - platform: esp32_rmt_led_strip
