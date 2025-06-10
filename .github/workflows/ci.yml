@@ -10,36 +10,27 @@ permissions:
   contents: read
   id-token: write
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   label-check:
+    name: Label Check
     uses: ApolloAutomation/Workflows/.github/workflows/label-check.yml@main
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-      pull-requests: write
+    
   ci:
-    needs: [ label-check ]
+    name: Building ${{ matrix.file }}
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
+        file:
+          - Integrations/ESPHome/TEMP_PRO-1_ETH.yaml
+          - Integrations/ESPHome/TEMP_PRO-1_W.yaml
         esphome-version:
           - stable
           - beta
           - dev
-    uses: ApolloAutomation/Workflows/.github/workflows/build.yml@main
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-      pull-requests: write
-    with:
-      device-name: temp-project-1
-      yaml-files: |
-        Integrations/ESPHome/TEMP_PRO-1_ETH.yaml
-        Integrations/ESPHome/TEMP_PRO-1_W.yaml
-      esphome-version: ${{ matrix.esphome-version }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4.2.2
+      - name: Build ESPHome firmware to verify configuration
+        uses: esphome/build-action@v7
+        with:
+          yaml-file: ${{ matrix.file }}
