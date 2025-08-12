@@ -110,9 +110,12 @@ sensor:
     temperature:
       name: "Temperature"
       id: sht_temperature
+      update_interval: !lambda 'return id(temperature_update_interval).state * 1000;'
     humidity:
       name: "Relative Humidity"
       id: sht_humidity
+      update_interval: !lambda 'return id(humidity_update_interval).state * 1000;'
+    
   - platform: sen5x
     id: sen54
     pm_1_0:
@@ -168,7 +171,7 @@ sensor:
       normalized_offset_slope: 0
       time_constant: 0
     store_baseline: true
-    update_interval: 10s
+    update_interval: !lambda 'return id(air_quality_update_interval).state * 1000;'
 
   - platform: template
     name: "PM 0.3 To 1 µm"
@@ -178,7 +181,7 @@ sensor:
     unit_of_measurement: "µg/m³"
     state_class: measurement
     icon: mdi:air-filter
-    update_interval: 10s
+    update_interval: !lambda 'return id(template_sensors_update_interval).state * 1000;'
   
   - platform: template
     name: "PM 1 To 2.5 µm"
@@ -188,7 +191,7 @@ sensor:
     unit_of_measurement: "µg/m³"
     state_class: measurement
     icon: mdi:air-filter
-    update_interval: 10s
+    update_interval: !lambda 'return id(template_sensors_update_interval).state * 1000;'
   
   - platform: template
     name: "PM 2.5 To 4 µm"
@@ -198,7 +201,7 @@ sensor:
     unit_of_measurement: "µg/m³"
     state_class: measurement
     icon: mdi:air-filter
-    update_interval: 10s
+    update_interval: !lambda 'return id(template_sensors_update_interval).state * 1000;'
 
   - platform: template
     name: "PM 4 To 10 µm"
@@ -207,7 +210,7 @@ sensor:
     lambda: return id(pm_10_0).state - id(pm_4_0).state;
     unit_of_measurement: "µg/m³"
     icon: mdi:air-filter
-    update_interval: 10s
+    update_interval: !lambda 'return id(template_sensors_update_interval).state * 1000;'
 
 light:
   - platform: esp32_rmt_led_strip
@@ -251,8 +254,6 @@ button:
     disabled_by_default: True
     name: "Factory Reset ESP"
     id: factory_reset_all
-
-
 
 number:
   - platform: template
@@ -307,6 +308,59 @@ number:
     mode: box
     entity_category: config
 
+  # Configurable sensor update intervals
+  - platform: template
+    id: temperature_update_interval
+    name: "Temperature Update Interval"
+    min_value: 5
+    max_value: 120
+    step: 5
+    unit_of_measurement: 's'
+    initial_value: 10
+    optimistic: true
+    restore_value: true
+    mode: box
+    entity_category: config
+
+  - platform: template
+    id: humidity_update_interval
+    name: "Humidity Update Interval"
+    min_value: 5
+    max_value: 120
+    step: 5
+    unit_of_measurement: 's'
+    initial_value: 10
+    optimistic: true
+    restore_value: true
+    mode: box
+    entity_category: config
+
+  - platform: template
+    id: air_quality_update_interval
+    name: "Air Quality Update Interval"
+    min_value: 5
+    max_value: 120
+    step: 5
+    unit_of_measurement: 's'
+    initial_value: 10
+    optimistic: true
+    restore_value: true
+    mode: box
+    entity_category: config
+
+  - platform: template
+    id: template_sensors_update_interval
+    name: "Template Sensors Update Interval"
+    min_value: 5
+    max_value: 60
+    step: 1
+    unit_of_measurement: 's'
+    initial_value: 10
+    optimistic: true
+    restore_value: true
+    mode: box
+    entity_category: config
+
 switch:
   - platform: factory_reset
     id: factory_reset_switch
@@ -332,7 +386,6 @@ switch:
     id: alarm_outside_humidity_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
-
 
 interval:
   - interval: 10s
