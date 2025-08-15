@@ -26,6 +26,14 @@ globals:
     restore_value: no
     type: uint32_t
     initial_value: '0'
+  - id: last_temp_update
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_humidity_update
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
 
 i2c:
   sda: GPIO16
@@ -108,11 +116,36 @@ sensor:
 
   - platform: sht3xd
     temperature:
-      name: "Temperature"
-      id: sht_temperature
+      name: "Temperature Raw"
+      id: sht_temperature_raw
+      internal: true
     humidity:
-      name: "Relative Humidity"
-      id: sht_humidity
+      name: "Relative Humidity Raw"
+      id: sht_humidity_raw
+      internal: true
+    update_interval: 10s
+
+  # Template sensors with configurable intervals
+  - platform: template
+    name: "Temperature"
+    id: sht_temperature
+    lambda: 'return id(sht_temperature_raw).state;'
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: never
+
+  - platform: template
+    name: "Relative Humidity"
+    id: sht_humidity
+    lambda: 'return id(sht_humidity_raw).state;'
+    unit_of_measurement: "%"
+    device_class: humidity
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: never
+
   - platform: sen5x
     id: sen54
     pm_1_0:
@@ -180,7 +213,6 @@ sensor:
     icon: mdi:air-filter
     update_interval: 10s
     
-  
   - platform: template
     name: "PM 1 To 2.5 µm"
     id: pm1_to_2_5
@@ -243,7 +275,6 @@ button:
         - lambda: |-
             id(update_http_request).perform(true);
     
-            
   - platform: restart
     icon: mdi:power-cycle
     name: "ESP Reboot"
@@ -252,8 +283,6 @@ button:
     disabled_by_default: True
     name: "Factory Reset ESP"
     id: factory_reset_all
-
-
 
 number:
   - platform: template
@@ -308,6 +337,33 @@ number:
     mode: box
     entity_category: config
 
+  # Configurable temperature and humidity intervals (in hours)
+  - platform: template
+    id: temperature_update_interval
+    name: "Temperature Update Interval"
+    min_value: 0.1
+    max_value: 24
+    step: 0.1
+    unit_of_measurement: 'h'
+    initial_value: 0.1
+    optimistic: true
+    restore_value: true
+    mode: box
+    entity_category: config
+
+  - platform: template
+    id: humidity_update_interval
+    name: "Humidity Update Interval"
+    min_value: 0.1
+    max_value: 24
+    step: 0.1
+    unit_of_measurement: 'h'
+    initial_value: 0.1
+    optimistic: true
+    restore_value: true
+    mode: box
+    entity_category: config
+
 switch:
   - platform: factory_reset
     id: factory_reset_switch
@@ -326,14 +382,12 @@ switch:
     id: alarm_outside_temp_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
-
     
   - platform: template
     name: "Alarm Outside Humidity Range"
     id: alarm_outside_humidity_range    
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
-
 
 interval:
   - interval: 10s
@@ -348,6 +402,24 @@ interval:
                 id(rgb_light).turn_on().set_effect("Fast Pulse").perform();
                 id(rgb_light).turn_on().set_rgb(1, 0, 0).set_transition_length(0).perform();
                 id(rtttl_buzzer).play("siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e;");
+
+  # Temperature and humidity configurable intervals
+  - interval: 60s
+    then:
+      - lambda: |-
+          // Temperature update check (hours to milliseconds)
+          uint32_t temp_interval_ms = id(temperature_update_interval).state * 3600 * 1000;
+          if (millis() - id(last_temp_update) >= temp_interval_ms) {
+            id(sht_temperature).publish_state(id(sht_temperature_raw).state);
+            id(last_temp_update) = millis();
+          }
+          
+          // Humidity update check (hours to milliseconds)
+          uint32_t humidity_interval_ms = id(humidity_update_interval).state * 3600 * 1000;
+          if (millis() - id(last_humidity_update) >= humidity_interval_ms) {
+            id(sht_humidity).publish_state(id(sht_humidity_raw).state);
+            id(last_humidity_update) = millis();
+          }
 
 text_sensor:
   - platform: template
