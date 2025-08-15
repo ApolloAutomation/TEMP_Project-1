@@ -457,18 +457,18 @@ interval:
                 id(rtttl_buzzer).play("siren:d=8,o=5,b=100:d,e,d,e,d,e,d,e;");
 
   # Temperature and humidity configurable intervals
-  - interval: 60s
+  - interval: 10s
     then:
       - lambda: |-
-          // Temperature update check (hours to milliseconds)
-          uint32_t temp_interval_ms = id(temperature_update_interval).state * 3600 * 1000;
+          // Temperature update check (min to milliseconds)
+          uint32_t temp_interval_ms = id(temperature_update_interval).state * 60 * 1000;
           if (millis() - id(last_temp_update) >= temp_interval_ms) {
             id(sht_temperature).publish_state(id(sht_temperature_raw).state);
             id(last_temp_update) = millis();
           }
           
-          // Humidity update check (hours to milliseconds)
-          uint32_t humidity_interval_ms = id(humidity_update_interval).state * 3600 * 1000;
+          // Humidity update check (min to milliseconds)
+          uint32_t humidity_interval_ms = id(humidity_update_interval).state * 60 * 1000;
           if (millis() - id(last_humidity_update) >= humidity_interval_ms) {
             id(sht_humidity).publish_state(id(sht_humidity_raw).state);
             id(last_humidity_update) = millis();
