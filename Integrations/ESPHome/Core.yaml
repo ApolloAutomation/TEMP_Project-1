@@ -2,6 +2,19 @@ substitutions:
   version: "25.6.23.1"
   device_description: TEMP_PRO-1 made by Apollo Automation - version ${version}.
 
+esphome:
+  name: temp-pro-1
+  on_boot:
+    priority: -100  # Run after everything else is initialized
+    then:
+      - delay: 5s
+      - lambda: |-
+          // Force initial updates on boot
+          id(sht_temperature).publish_state(id(sht_temperature_raw).state);
+          id(sht_humidity).publish_state(id(sht_humidity_raw).state);
+          id(last_temp_update) = millis();
+          id(last_humidity_update) = millis();
+
 esp32:
   board: esp32-s3-devkitc-1
   variant: esp32s3
@@ -17,6 +30,7 @@ api:
       then:
         - rtttl.play:
             rtttl: !lambda 'return song_str;'
+
 globals:
   - id: cycleCounter
     type: int
@@ -239,6 +253,7 @@ sensor:
     disabled_by_default: true
     lambda: return std::max(0.0f, id(pm_10_0).state - id(pm_4_0).state);
     unit_of_measurement: "µg/m³"
+    state_class: measurement
     icon: mdi:air-filter
     update_interval: 10s
 
@@ -350,6 +365,12 @@ number:
     restore_value: true
     mode: box
     entity_category: config
+    on_value:
+      then:
+        - lambda: |-
+            // Force immediate temperature update when interval changes
+            id(sht_temperature).publish_state(id(sht_temperature_raw).state);
+            id(last_temp_update) = millis();
 
   - platform: template
     id: humidity_update_interval
@@ -363,6 +384,12 @@ number:
     restore_value: true
     mode: box
     entity_category: config
+    on_value:
+      then:
+        - lambda: |-
+            // Force immediate humidity update when interval changes
+            id(sht_humidity).publish_state(id(sht_humidity_raw).state);
+            id(last_humidity_update) = millis();
 
 switch:
   - platform: factory_reset
