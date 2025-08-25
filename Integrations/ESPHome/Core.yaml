@@ -17,6 +17,28 @@ api:
       then:
         - rtttl.play:
             rtttl: !lambda 'return song_str;'
+  reboot_timeout: 0s
+  on_client_connected:
+    then:
+      - delay: 5s
+      - if:
+          condition:
+            or:
+              - binary_sensor.is_on: ota_mode
+              - switch.is_on: prevent_sleep
+          then:
+            - lambda: |- 
+                ESP_LOGW("Apollo", "Preventing Deep Sleep Due To OTA Or Switch");
+                id(deep_sleep_1).prevent_deep_sleep(); 
+          else: 
+            - switch.turn_on: accessory_power
+            - delay: 10s
+            - lambda: |-
+                id(reportAllValues).execute();
+            - delay: 5s
+            - deep_sleep.enter:
+                id: deep_sleep_1
+
 globals:
   - id: cycleCounter
     type: int
@@ -76,6 +98,22 @@ binary_sensor:
               // StatusCheck
               id(statusCheck).execute();
             }
+  - platform: homeassistant
+    name: "OTA Mode"
+    id: ota_mode
+    entity_id: input_boolean.apollo_ota_mode
+    on_press:
+      then:
+        - lambda: |- 
+            id(deep_sleep_1).prevent_deep_sleep();
+    on_release:  
+      then:
+        - if:
+            condition:
+              switch.is_off: prevent_sleep
+            then:
+              - lambda: |- 
+                  id(deep_sleep_1).allow_deep_sleep();
 
   - platform: template
     name: Temperature Within Range
@@ -107,6 +145,7 @@ sensor:
     update_interval: 60s
 
   - platform: sht3xd
+    id: sht30
     temperature:
       name: "Temperature"
       id: sht_temperature
@@ -209,6 +248,22 @@ sensor:
     unit_of_measurement: "µg/m³"
     icon: mdi:air-filter
     update_interval: 10s
+    
+  - platform: dallas_temp
+    name: "Dallas Temperature Probe"
+    update_interval: 60s
+    id: temp_probe
+    filters:
+      - lambda: |-
+          if (isnan(x)) {
+            return NAN;
+          }
+
+          if (x == 85.0) {
+              return NAN;
+          }
+
+          return x;
 
 light:
   - platform: esp32_rmt_led_strip
@@ -334,10 +389,35 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
 
+  - platform: template
+    name: "Prevent Sleep"
+    id: prevent_sleep
+    icon: mdi:sleep
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: true
+    entity_category: "config"
+    on_turn_on:
+      then:
+        - lambda: |- 
+            id(deep_sleep_1).prevent_deep_sleep();
+    on_turn_off:
+      then:
+        - if:
+            condition:
+              binary_sensor.is_off: ota_mode
+            then:
+              - lambda: |- 
+                  id(deep_sleep_1).allow_deep_sleep();
+
 
 interval:
   - interval: 10s
+    id: alarm_check_interval
     startup_delay: 60s
+    then:
+      - script.execute: alarm_script
+script:
+  - id: alarm_script
     then:
       - if:
           condition:

@@ -11,6 +11,20 @@ esphome:
     version: "${version}"
 
   min_version: 2025.2.0
+  on_boot:
+    - priority: 500
+      then:
+        - lambda: |-
+            id(deep_sleep_1).set_sleep_duration(id(deep_sleep_sleep_duration).state * 60 * 60 * 1000);
+        - if:
+            condition:
+              or:
+                - binary_sensor.is_on: ota_mode
+                - switch.is_on: prevent_sleep
+            then:
+              - lambda: |- 
+                  ESP_LOGW("Apollo", "Preventing Deep Sleep Due To OTA On Boot");
+                  id(deep_sleep_1).prevent_deep_sleep();
 
 dashboard_import:
   package_import_url: github://ApolloAutomation/TEMP_PROJECT-1/Integrations/ESPHome/TEMP_PRO-1_ETH.yaml
@@ -90,3 +104,4 @@ select:
 
 packages:
   core: !include Core.yaml
+  battery: !include Battery.yaml
